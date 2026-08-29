@@ -1892,7 +1892,9 @@ async function startCamera(){
   }
 }
 
-startButton.addEventListener("click",startCamera);
+startButton.onclick = function() {
+    startCamera();
+};
 
 
 /* Initial visual */
