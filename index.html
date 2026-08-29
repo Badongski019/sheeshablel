@@ -1,94 +1,1472 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+
+<meta
+    name="viewport"
+    content="width=device-width,
+    initial-scale=1.0,
+    maximum-scale=1.0,
+    user-scalable=no"
+>
+
 <title>For You ❤️</title>
 
 <style>
-*{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050505;font-family:Arial,sans-serif}
-video{display:none}
-canvas{position:fixed;inset:0;width:100%;height:100%;z-index:1}
-#status{
-  position:fixed;top:18px;left:0;width:100%;z-index:10;
-  padding:0 18px;text-align:center;color:#ffb6c1;font-size:16px;
-  text-shadow:0 0 12px rgba(255,182,193,.9);pointer-events:none
-}
-#startScreen{
-  position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;
-  justify-content:center;align-items:center;padding:28px;text-align:center;
-  background:radial-gradient(circle,rgba(255,77,109,.2),transparent 45%),#050505
-}
-#startScreen h1{color:#ff4d6d;font-size:30px;margin:0 0 12px}
-#startScreen p{color:#ddd;max-width:330px;line-height:1.6;font-size:15px}
-#startButton{
-  margin-top:18px;padding:15px 28px;border:0;border-radius:30px;
-  background:linear-gradient(135deg,#ff4d6d,#ff758f);color:white;
-  font-size:17px;font-weight:bold;box-shadow:0 0 30px rgba(255,77,109,.5)
-}
-#startButton:disabled{opacity:.6}
-#error{margin-top:18px;max-width:330px;color:#ff8fa3;font-size:14px;line-height:1.5}
 
-#letterOverlay{
-  position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;
-  padding:22px;background:rgba(0,0,0,.18);backdrop-filter:blur(2px);
-  opacity:0;visibility:hidden;pointer-events:none;transition:.35s ease
+/* =========================================================
+   BASIC
+========================================================= */
+
+* {
+    box-sizing: border-box;
 }
-#letterOverlay.show{opacity:1;visibility:visible}
-#letterBox{
-  width:min(92vw,430px);max-height:78vh;overflow:auto;padding:30px 25px;
-  border:1px solid rgba(255,255,255,.25);border-radius:22px;
-  background:linear-gradient(145deg,rgba(255,255,255,.15),rgba(255,255,255,.06)),rgba(20,10,18,.94);
-  box-shadow:0 20px 70px rgba(0,0,0,.65),0 0 35px rgba(255,77,109,.28);
-  transform:scale(.65) translateY(35px);transition:transform .48s cubic-bezier(.2,.85,.25,1.2);
-  color:white
+
+html,
+body {
+
+    margin: 0;
+    padding: 0;
+
+    width: 100%;
+    height: 100%;
+
+    overflow: hidden;
+
+    background: #050505;
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
 }
-#letterOverlay.show #letterBox{transform:scale(1) translateY(0)}
-#letterHeart{text-align:center;font-size:38px;margin-bottom:7px}
-#letterTitle{text-align:center;color:#ff9fb1;font-size:21px;font-weight:bold;margin-bottom:20px}
-#letterText{white-space:pre-line;color:#fff;font-size:16px;line-height:1.75}
-#letterClose{
-  display:block;margin:20px auto 0;padding:10px 22px;border:1px solid rgba(255,255,255,.25);
-  border-radius:22px;background:rgba(255,77,109,.18);color:white
+
+video {
+    display: none;
 }
+
+
+/* =========================================================
+   PARTICLE CANVAS
+========================================================= */
+
+canvas {
+
+    position: fixed;
+
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+
+    z-index: 1;
+}
+
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+#status {
+
+    position: fixed;
+
+    top: 18px;
+    left: 0;
+
+    width: 100%;
+
+    padding:
+        0 20px;
+
+    text-align: center;
+
+    color: #ffb6c1;
+
+    font-size: 16px;
+
+    text-shadow:
+        0 0 12px
+        rgba(
+            255,
+            182,
+            193,
+            .9
+        );
+
+    z-index: 10;
+
+    pointer-events: none;
+}
+
+
+/* =========================================================
+   START SCREEN
+========================================================= */
+
+#startScreen {
+
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 30;
+
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: center;
+
+    align-items: center;
+
+    padding: 30px;
+
+    text-align: center;
+
+    background:
+
+        radial-gradient(
+            circle,
+            rgba(
+                255,
+                77,
+                109,
+                .2
+            ),
+            transparent 45%
+        ),
+
+        #050505;
+}
+
+
+#startScreen h1 {
+
+    margin: 0 0 12px;
+
+    color: #ff4d6d;
+
+    font-size: 30px;
+
+    text-shadow:
+        0 0 20px
+        rgba(
+            255,
+            77,
+            109,
+            .5
+        );
+}
+
+
+#startScreen p {
+
+    color: #ddd;
+
+    max-width: 330px;
+
+    line-height: 1.6;
+
+    font-size: 15px;
+}
+
+
+#startButton {
+
+    margin-top: 20px;
+
+    padding:
+        15px 30px;
+
+    border: none;
+
+    border-radius: 30px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #ff4d6d,
+            #ff758f
+        );
+
+    color: white;
+
+    font-size: 17px;
+
+    font-weight: bold;
+
+    box-shadow:
+        0 0 30px
+        rgba(
+            255,
+            77,
+            109,
+            .5
+        );
+}
+
+
+#startButton:disabled {
+
+    opacity: .6;
+}
+
+
+#error {
+
+    margin-top: 20px;
+
+    max-width: 320px;
+
+    color: #ff8fa3;
+
+    font-size: 14px;
+
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   💌 LETTER OVERLAY
+========================================================= */
+
+#letterOverlay {
+
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 20;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    padding: 20px;
+
+    background:
+        rgba(
+            0,
+            0,
+            0,
+            .35
+        );
+
+    backdrop-filter:
+        blur(3px);
+
+    opacity: 0;
+
+    visibility: hidden;
+
+    pointer-events: none;
+
+    transition:
+        opacity .35s ease,
+        visibility .35s ease;
+
+    /*
+       Prevent the background
+       from moving while the
+       letter itself scrolls.
+    */
+
+    touch-action: none;
+}
+
+
+#letterOverlay.show {
+
+    opacity: 1;
+
+    visibility: visible;
+
+    pointer-events: auto;
+}
+
+
+/* =========================================================
+   💌 LETTER BOX
+========================================================= */
+
+#letterBox {
+
+    width:
+        min(
+            92vw,
+            430px
+        );
+
+    /*
+       THIS IS IMPORTANT.
+
+       The message can be longer
+       than the screen.
+
+       Only this box scrolls.
+    */
+
+    max-height: 75vh;
+
+    overflow-y: auto;
+
+    overflow-x: hidden;
+
+    /*
+       Smooth scrolling on iPhone
+       and Android.
+    */
+
+    -webkit-overflow-scrolling:
+        touch;
+
+    overscroll-behavior:
+        contain;
+
+    touch-action:
+        pan-y;
+
+    /*
+       Scrollbar.
+    */
+
+    scrollbar-width:
+        thin;
+
+
+    padding:
+        30px 25px;
+
+
+    border:
+        1px solid
+        rgba(
+            255,
+            255,
+            255,
+            .25
+        );
+
+
+    border-radius:
+        22px;
+
+
+    background:
+
+        linear-gradient(
+            145deg,
+            rgba(
+                255,
+                255,
+                255,
+                .15
+            ),
+            rgba(
+                255,
+                255,
+                255,
+                .06
+            )
+        ),
+
+        rgba(
+            20,
+            10,
+            18,
+            .96
+        );
+
+
+    box-shadow:
+
+        0 20px 70px
+        rgba(
+            0,
+            0,
+            0,
+            .65
+        ),
+
+        0 0 35px
+        rgba(
+            255,
+            77,
+            109,
+            .28
+        );
+
+
+    backdrop-filter:
+        blur(14px);
+
+
+    color: white;
+
+
+    transform:
+        scale(.65)
+        translateY(35px);
+
+
+    transition:
+        transform
+        .48s
+        cubic-bezier(
+            .2,
+            .85,
+            .25,
+            1.2
+        );
+}
+
+
+/* =========================================================
+   LETTER OPEN ANIMATION
+========================================================= */
+
+#letterOverlay.show
+#letterBox {
+
+    transform:
+        scale(1)
+        translateY(0);
+}
+
+
+/* =========================================================
+   ANDROID / CHROME SCROLLBAR
+========================================================= */
+
+#letterBox::-webkit-scrollbar {
+
+    width: 7px;
+}
+
+
+#letterBox::-webkit-scrollbar-track {
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            .06
+        );
+
+    border-radius:
+        10px;
+}
+
+
+#letterBox::-webkit-scrollbar-thumb {
+
+    background:
+        rgba(
+            255,
+            159,
+            177,
+            .6
+        );
+
+    border-radius:
+        10px;
+}
+
+
+/* =========================================================
+   LETTER CONTENT
+========================================================= */
+
+#letterHeart {
+
+    text-align: center;
+
+    font-size: 38px;
+
+    margin-bottom: 8px;
+}
+
+
+#letterTitle {
+
+    text-align: center;
+
+    color: #ff9fb1;
+
+    font-size: 21px;
+
+    font-weight: bold;
+
+    margin-bottom: 20px;
+}
+
+
+#letterText {
+
+    white-space:
+        pre-line;
+
+    color: white;
+
+    font-size: 16px;
+
+    line-height: 1.75;
+
+    text-align: left;
+
+    /*
+       Makes sure long words
+       don't break the popup.
+    */
+
+    overflow-wrap:
+        break-word;
+}
+
+
+/* =========================================================
+   CLOSE BUTTON
+========================================================= */
+
+#letterClose {
+
+    display: block;
+
+    margin:
+        25px auto 0;
+
+    padding:
+        11px 24px;
+
+    min-width: 50px;
+
+    border:
+        1px solid
+        rgba(
+            255,
+            255,
+            255,
+            .25
+        );
+
+    border-radius:
+        25px;
+
+    background:
+        rgba(
+            255,
+            77,
+            109,
+            .18
+        );
+
+    color: white;
+
+    font-size: 16px;
+}
+
 </style>
 
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+<!-- =========================================================
+     MEDIAPIPE
+========================================================= -->
+
+<script
+src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"
+crossorigin="anonymous">
+</script>
+
+<script
+src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"
+crossorigin="anonymous">
+</script>
+
 </head>
+
 
 <body>
 
+
+<!-- =========================================================
+     START
+========================================================= -->
+
 <div id="startScreen">
-  <h1>❤️ For You</h1>
-  <p>
-    ✌️ Peace → ❤️ Heart<br>
-    ✊ Closed Fist → I LOVE YOU<br>
-    🖐️ Open Hand → 💌 Letter
-  </p>
-  <button id="startButton">Open Camera 📷</button>
-  <div id="error"></div>
+
+    <h1>
+        ❤️ For You
+    </h1>
+
+
+    <p>
+
+        A little surprise
+        made with love.
+
+        <br><br>
+
+        ✌️ Peace → ❤️ Heart
+
+        <br>
+
+        ✊ Fist → I LOVE YOU
+
+        <br>
+
+        🖐️ Open Hand → 💌 Letter
+
+    </p>
+
+
+    <button id="startButton">
+
+        Open Camera 📷
+
+    </button>
+
+
+    <div id="error"></div>
+
 </div>
 
-<div id="status">I-angat ang kamay ✋</div>
-<video id="webcam" autoplay playsinline muted></video>
+
+
+<!-- =========================================================
+     STATUS
+========================================================= -->
+
+<div id="status">
+
+    I-angat ang kamay ✋
+
+</div>
+
+
+
+<!-- =========================================================
+     CAMERA
+========================================================= -->
+
+<video
+    id="webcam"
+    autoplay
+    playsinline
+    muted>
+</video>
+
+
+
+<!-- =========================================================
+     PARTICLES
+========================================================= -->
+
 <canvas id="canvas"></canvas>
 
+
+
+<!-- =========================================================
+     💌 LETTER POPUP
+========================================================= -->
+
 <div id="letterOverlay">
-  <div id="letterBox">
-    <div id="letterHeart">💌</div>
-    <div id="letterTitle">A little message for you</div>
-    <div id="letterText"></div>
-    <button id="letterClose" type="button">❤️</button>
-  </div>
+
+
+    <div id="letterBox">
+
+
+        <div id="letterHeart">
+
+            💌
+
+        </div>
+
+
+        <div id="letterTitle">
+
+            A little message for you
+
+        </div>
+
+
+        <div id="letterText"></div>
+
+
+        <button
+            id="letterClose"
+            type="button">
+
+            ❤️
+
+        </button>
+
+
+    </div>
+
 </div>
+
+
 
 <script>
 
-/* ============================================================
+
+/* =========================================================
    💌 YOUR MESSAGE
-============================================================ */
+========================================================= */
+
+const loveLetter = `Hi tutut ko!
+
+Sana magustuhan mo itong maliit
+na surprise na ginawa ko para sa'yo.
+
+Gusto ko lang malaman mo na
+sobrang special ka saakin!!
+
+Thank you sa lahat ng moments,
+sa smiles, sa laughs,
+at sa happiness na binibigay mo saakinnn!
+
+I hope this little thing
+makes you smile today.
+
+I love you tut!`;
+
+
+
+/* =========================================================
+   ELEMENTS
+========================================================= */
+
+const video =
+    document.getElementById(
+        "webcam"
+    );
+
+const canvas =
+    document.getElementById(
+        "canvas"
+    );
+
+const ctx =
+    canvas.getContext(
+        "2d"
+    );
+
+const status =
+    document.getElementById(
+        "status"
+    );
+
+const startScreen =
+    document.getElementById(
+        "startScreen"
+    );
+
+const startButton =
+    document.getElementById(
+        "startButton"
+    );
+
+const errorEl =
+    document.getElementById(
+        "error"
+    );
+
+const letterOverlay =
+    document.getElementById(
+        "letterOverlay"
+    );
+
+const letterBox =
+    document.getElementById(
+        "letterBox"
+    );
+
+const letterText =
+    document.getElementById(
+        "letterText"
+    );
+
+const letterClose =
+    document.getElementById(
+        "letterClose"
+    );
+
+
+
+/* =========================================================
+   VARIABLES
+========================================================= */
+
+let W = 0;
+let H = 0;
+
+let particles = [];
+
+let currentGesture =
+    "NONE";
+
+let candidateGesture =
+    "NONE";
+
+let candidateSince =
+    0;
+
+const HOLD_MS =
+    500;
+
+
+
+/* =========================================================
+   RESIZE
+========================================================= */
+
+function resize() {
+
+    W =
+        window.innerWidth;
+
+    H =
+        window.innerHeight;
+
+
+    canvas.width =
+        W;
+
+    canvas.height =
+        H;
+}
+
+
+window.addEventListener(
+    "resize",
+    resize
+);
+
+
+resize();
+
+
+
+/* =========================================================
+   PARTICLE
+========================================================= */
+
+class Particle {
+
+    constructor(
+        targetX,
+        targetY,
+        color
+    ) {
+
+        this.x =
+            Math.random() * W;
+
+        this.y =
+            Math.random() * H;
+
+
+        this.tx =
+            targetX;
+
+        this.ty =
+            targetY;
+
+
+        this.color =
+            color;
+
+
+        this.size =
+            Math.random() *
+            2.4 + 1;
+
+
+        this.alpha =
+            .55 +
+            Math.random() *
+            .45;
+    }
+
+
+    update() {
+
+        this.x +=
+            (
+                this.tx -
+                this.x
+            ) * .075;
+
+
+        this.y +=
+            (
+                this.ty -
+                this.y
+            ) * .075;
+    }
+
+
+    draw() {
+
+        ctx.globalAlpha =
+            this.alpha;
+
+
+        ctx.fillStyle =
+            this.color;
+
+
+        ctx.shadowBlur =
+            11;
+
+
+        ctx.shadowColor =
+            this.color;
+
+
+        ctx.beginPath();
+
+
+        ctx.arc(
+
+            this.x,
+            this.y,
+            this.size,
+            0,
+            Math.PI * 2
+
+        );
+
+
+        ctx.fill();
+
+
+        ctx.shadowBlur =
+            0;
+
+
+        ctx.globalAlpha =
+            1;
+    }
+}
+
+
+
+/* =========================================================
+   ❤️ HEART
+========================================================= */
+
+function createHeart(
+    count = 520
+) {
+
+    particles = [];
+
+
+    const scale =
+        Math.min(
+            W,
+            H
+        ) / 35;
+
+
+    for (
+        let i = 0;
+        i < count;
+        i++
+    ) {
+
+
+        const t =
+            Math.random() *
+            Math.PI *
+            2;
+
+
+        const x =
+            16 *
+            Math.pow(
+                Math.sin(t),
+                3
+            );
+
+
+        const y =
+            -(
+                13 *
+                Math.cos(t)
+
+                -
+
+                5 *
+                Math.cos(
+                    2 * t
+                )
+
+                -
+
+                2 *
+                Math.cos(
+                    3 * t
+                )
+
+                -
+
+                Math.cos(
+                    4 * t
+                )
+            );
+
+
+        const s =
+            .82 +
+            Math.random() *
+            .25;
+
+
+        particles.push(
+
+            new Particle(
+
+                W / 2 +
+                x *
+                scale *
+                s,
+
+
+                H / 2 +
+                y *
+                scale *
+                s,
+
+
+                "#ff4d6d"
+
+            )
+
+        );
+    }
+}
+
+
+
+/* =========================================================
+   💖 I LOVE YOU
+========================================================= */
+
+function createILoveYou() {
+
+    particles = [];
+
+
+    const temp =
+        document.createElement(
+            "canvas"
+        );
+
+
+    const tempCtx =
+        temp.getContext(
+            "2d"
+        );
+
+
+    temp.width =
+        W;
+
+    temp.height =
+        H;
+
+
+    const fontSize =
+        Math.min(
+            W * .14,
+            82
+        );
+
+
+    tempCtx.fillStyle =
+        "white";
+
+
+    tempCtx.font =
+        `bold ${fontSize}px Arial`;
+
+
+    tempCtx.textAlign =
+        "center";
+
+
+    tempCtx.textBaseline =
+        "middle";
+
+
+    /*
+       IMPORTANT:
+
+       Canvas is NOT mirrored.
+
+       Therefore the words
+       will appear normally.
+    */
+
+    tempCtx.fillText(
+
+        "I LOVE YOU",
+
+        W / 2,
+
+        H / 2
+
+    );
+
+
+    const pixels =
+        tempCtx.getImageData(
+            0,
+            0,
+            W,
+            H
+        ).data;
+
+
+    for (
+        let y = 0;
+        y < H;
+        y += 5
+    ) {
+
+        for (
+            let x = 0;
+            x < W;
+            x += 5
+        ) {
+
+            const index =
+                (
+                    y * W +
+                    x
+                ) * 4;
+
+
+            if (
+                pixels[
+                    index + 3
+                ] > 128
+            ) {
+
+                particles.push(
+
+                    new Particle(
+
+                        x,
+                        y,
+
+                        "#ff4d6d"
+
+                    )
+
+                );
+            }
+        }
+    }
+}
+
+
+
+/* =========================================================
+   💌 LETTER
+========================================================= */
+
+function showLetter() {
+
+    letterText.textContent =
+        loveLetter.trim();
+
+
+    letterOverlay.classList.add(
+        "show"
+    );
+}
+
+
+function hideLetter() {
+
+    letterOverlay.classList.remove(
+        "show"
+    );
+}
+
+
+letterClose.addEventListener(
+    "click",
+    hideLetter
+);
+
+
+
+/* =========================================================
+   ✋ GESTURE DETECTION
+========================================================= */
+
+function distance(
+    a,
+    b
+) {
+
+    return Math.hypot(
+
+        a.x - b.x,
+
+        a.y - b.y
+
+    );
+}
+
+
+
+function recognizeGesture(
+    landmarks
+) {
+
+    const wrist =
+        landmarks[0];
+
+
+    /*
+       Compare fingertip distance
+       to its PIP joint distance.
+
+       This works better for a
+       palm-facing-camera fist.
+    */
+
+    const indexUp =
+        distance(
+            landmarks[8],
+            wrist
+        ) >
+
+        distance(
+            landmarks[6],
+            wrist
+        ) * 1.10;
+
+
+    const middleUp =
+        distance(
+            landmarks[12],
+            wrist
+        ) >
+
+        distance(
+            landmarks[10],
+            wrist
+        ) * 1.10;
+
+
+    const ringUp =
+        distance(
+            landmarks[16],
+            wrist
+        ) >
+
+        distance(
+            landmarks[14],
+            wrist
+        ) * 1.10;
+
+
+    const pinkyUp =
+        distance(
+            landmarks[20],
+            wrist
+        ) >
+
+        distance(
+            landmarks[18],
+            wrist
+        ) * 1.10;
+
+
+    const count =
+        [
+            indexUp,
+            middleUp,
+            ringUp,
+            pinkyUp
+        ].filter(Boolean).length;
+
+
+
+    /* =====================================================
+       ✊ FIST
+    ===================================================== */
+
+    if (
+        count === 0
+    ) {
+
+        return "FIST";
+    }
+
+
+
+    /* =====================================================
+       ✌️ PEACE
+    ===================================================== */
+
+    if (
+
+        indexUp &&
+        middleUp &&
+        !ringUp &&
+        !pinkyUp
+
+    ) {
+
+        return "PEACE";
+    }
+
+
+
+    /* =====================================================
+       🖐️ OPEN
+    ===================================================== */
+
+    if (
+        count === 4
+    ) {
+
+        return "OPEN";
+    }
+
+
+    return "NONE";
+}
+
+
+
+/* =========================================================
+   GESTURE SMOOTHING
+========================================================= */
+
+function processGesture(
+    gesture
+) {
+
+    if (
+        gesture ===
+        "NONE"
+    ) {
+
+        return;
+    }
+
+
+    if (
+        gesture !==
+        candidateGesture
+    ) {
+
+        candidateGesture =
+            gesture;
+
+
+        candidateSince =
+            performance.now();
+
+
+        return;
+    }
+
+
+    if (
+
+        performance.now() -
+        candidateSince >=
+        HOLD_MS
+
+        &&
+
+        currentGesture !==
+        candidateGesture
+
+    ) {
+
+        currentGesture =
+            candidateGesture;
+
+
+        triggerGesture(
+            currentGesture
+        );
+    }
+}
+
+
+
+/* =========================================================
+   🎬 TRIGGER
+========================================================= */
+
+function triggerGesture(
+    gesture
+) {
+
+
+    /* =====================================================
+       ✌️ PEACE
+    ===================================================== */
+
+    if (
+        gesture ===
+        "PEACE"
+    ) {
+
+        hideLetter();
+
+
+        status.textContent =
+            "❤️ Heart Formed!";
+
+
+        createHeart(
+            520
+        );
+    }
+
+
+
+    /* =====================================================
+       ✊ FIST
+    ===================================================== */
+
+    else if (
+        gesture ===
+        "FIST"
+    ) {
+
+        hideLetter();
+
+
+        status.textContent =
+            "💖 I LOVE YOU";
+
+
+        createILoveYou();
+    }
+
+
+
+    ============================================================ */
 
 const loveLetter = `Hi tutut ko!
 
