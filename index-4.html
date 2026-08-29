@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>For You ❤️</title>
+
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050505;font-family:Arial,sans-serif}
+video{display:none}
+canvas{position:fixed;inset:0;width:100%;height:100%;z-index:1}
+#status{
+  position:fixed;top:18px;left:0;width:100%;z-index:10;
+  padding:0 18px;text-align:center;color:#ffb6c1;font-size:16px;
+  text-shadow:0 0 12px rgba(255,182,193,.9);pointer-events:none
+}
+#startScreen{
+  position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;
+  justify-content:center;align-items:center;padding:28px;text-align:center;
+  background:radial-gradient(circle,rgba(255,77,109,.2),transparent 45%),#050505
+}
+#startScreen h1{color:#ff4d6d;font-size:30px;margin:0 0 12px}
+#startScreen p{color:#ddd;max-width:330px;line-height:1.6;font-size:15px}
+#startButton{
+  margin-top:18px;padding:15px 28px;border:0;border-radius:30px;
+  background:linear-gradient(135deg,#ff4d6d,#ff758f);color:white;
+  font-size:17px;font-weight:bold;box-shadow:0 0 30px rgba(255,77,109,.5)
+}
+#startButton:disabled{opacity:.6}
+#error{margin-top:18px;max-width:330px;color:#ff8fa3;font-size:14px;line-height:1.5}
+
+#letterOverlay{
+  position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;
+  padding:22px;background:rgba(0,0,0,.18);backdrop-filter:blur(2px);
+  opacity:0;visibility:hidden;pointer-events:none;transition:.35s ease
+}
+#letterOverlay.show{opacity:1;visibility:visible}
+#letterBox{
+  width:min(92vw,430px);max-height:78vh;overflow:auto;padding:30px 25px;
+  border:1px solid rgba(255,255,255,.25);border-radius:22px;
+  background:linear-gradient(145deg,rgba(255,255,255,.15),rgba(255,255,255,.06)),rgba(20,10,18,.94);
+  box-shadow:0 20px 70px rgba(0,0,0,.65),0 0 35px rgba(255,77,109,.28);
+  transform:scale(.65) translateY(35px);transition:transform .48s cubic-bezier(.2,.85,.25,1.2);
+  color:white
+}
+#letterOverlay.show #letterBox{transform:scale(1) translateY(0)}
+#letterHeart{text-align:center;font-size:38px;margin-bottom:7px}
+#letterTitle{text-align:center;color:#ff9fb1;font-size:21px;font-weight:bold;margin-bottom:20px}
+#letterText{white-space:pre-line;color:#fff;font-size:16px;line-height:1.75}
+#letterClose{
+  display:block;margin:20px auto 0;padding:10px 22px;border:1px solid rgba(255,255,255,.25);
+  border-radius:22px;background:rgba(255,77,109,.18);color:white
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+</head>
+
+<body>
+
+<div id="startScreen">
+  <h1>❤️ For You</h1>
+  <p>
+    ✌️ Peace → ❤️ Heart<br>
+    ✊ Closed Fist → I LOVE YOU<br>
+    🖐️ Open Hand → 💌 Letter
+  </p>
+  <button id="startButton">Open Camera 📷</button>
+  <div id="error"></div>
+</div>
+
+<div id="status">I-angat ang kamay ✋</div>
+<video id="webcam" autoplay playsinline muted></video>
+<canvas id="canvas"></canvas>
+
+<div id="letterOverlay">
+  <div id="letterBox">
+    <div id="letterHeart">💌</div>
+    <div id="letterTitle">A little message for you</div>
+    <div id="letterText"></div>
+    <button id="letterClose" type="button">❤️</button>
+  </div>
+</div>
+
+<script>
+
+/* ============================================================
+   💌 YOUR MESSAGE
+============================================================ */
+
+const loveLetter = `Hi tutut ko!
+
+Sana magustuhan mo itong maliit
+na surprise na ginawa ko para sa'yo.
+
+Gusto ko lang malaman mo na
+sobrang special ka saakin!!
+
+Thank you sa lahat ng moments,
+sa smiles, sa laughs,
+at sa happiness na binibigay mo saakinnn!
+
+I hope this little thing
+makes you smile today.
+
+I love you tut!`;
+
+
+/* ============================================================
+   ELEMENTS / STATE
+============================================================ */
+
+const video = document.getElementById("webcam");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const status = document.getElementById("status");
+const startScreen = document.getElementById("startScreen");
+const startButton = document.getElementById("startButton");
+const errorEl = document.getElementById("error");
+const letterOverlay = document.getElementById("letterOverlay");
+const letterText = document.getElementById("letterText");
+const letterClose = document.getElementById("letterClose");
+
+let W=0,H=0;
+let particles=[];
+let currentGesture="NONE";
+let candidateGesture="NONE";
+let candidateSince=0;
+let camera=null;
+let stream=null;
+
+const HOLD_MS=500;
+
+
+/* ============================================================
+   CANVAS
+============================================================ */
+
+function resize(){
+  W=window.innerWidth;
+  H=window.innerHeight;
+  canvas.width=W;
+  canvas.height=H;
+}
+window.addEventListener("resize",resize);
+resize();
+
+
+/* ============================================================
+   PARTICLES
+============================================================ */
+
+class Particle{
+  constructor(x,y,color){
+    this.x=Math.random()*W;
+    this.y=Math.random()*H;
+    this.tx=x;
+    this.ty=y;
+    this.color=color;
+    this.size=Math.random()*2.4+1;
+    this.alpha=.55+Math.random()*.45;
+  }
+
+  update(){
+    this.x+=(this.tx-this.x)*.075;
+    this.y+=(this.ty-this.y)*.075;
+  }
+
+  draw(){
+    ctx.globalAlpha=this.alpha;
+    ctx.fillStyle=this.color;
+    ctx.shadowBlur=11;
+    ctx.shadowColor=this.color;
+    ctx.beginPath();
+    ctx.arc(this.x,this.y,this.size,0,Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.globalAlpha=1;
+  }
+}
+
+
+/* ============================================================
+   HEART
+============================================================ */
+
+function createHeart(count=520){
+  particles=[];
+  const scale=Math.min(W,H)/35;
+
+  for(let i=0;i<count;i++){
+    const t=Math.random()*Math.PI*2;
+    const x=16*Math.pow(Math.sin(t),3);
+    const y=-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t));
+    const s=.82+Math.random()*.25;
+
+    particles.push(new Particle(
+      W/2+x*scale*s,
+      H/2+y*scale*s,
+      "#ff4d6d"
+    ));
+  }
+}
+
+
+/* ============================================================
+   TEXT PARTICLES
+   IMPORTANT:
+   Canvas itself is NOT mirrored anymore.
+   Therefore text target coordinates are normal.
+============================================================ */
+
+function createTextParticles(text,color="#ff4d6d",fontSize=80){
+  particles=[];
+
+  const temp=document.createElement("canvas");
+  const tctx=temp.getContext("2d");
+  temp.width=W;
+  temp.height=H;
+
+  tctx.fillStyle="#fff";
+  tctx.font=`bold ${fontSize}px Arial`;
+  tctx.textAlign="center";
+  tctx.textBaseline="middle";
+  tctx.fillText(text,W/2,H/2);
+
+  const data=tctx.getImageData(0,0,W,H).data;
+
+  for(let y=0;y<H;y+=5){
+    for(let x=0;x<W;x+=5){
+      const i=(y*W+x)*4;
+      if(data[i+3]>128){
+        particles.push(new Particle(x,y,color));
+      }
+    }
+  }
+}
+
+
+/* ============================================================
+   I LOVE YOU
+============================================================ */
+
+function createILoveYou(){
+  const size=Math.min(W*.14,82);
+  createTextParticles("I LOVE YOU","#ff4d6d",size);
+}
+
+
+/* ============================================================
+   LETTER POPUP
+============================================================ */
+
+function showLetter(){
+  letterText.textContent=loveLetter.trim();
+  letterOverlay.classList.add("show");
+}
+
+function hideLetter(){
+  letterOverlay.classList.remove("show");
+}
+
+letterClose.addEventListener("click",hideLetter);
+
+
+/* ============================================================
+   ROBUST HAND GESTURE DETECTION
+   User selected A:
+   PALM / FRONT OF HAND facing the camera.
+
+   Instead of only checking Y position, this measures each
+   fingertip's distance from the wrist relative to the palm.
+   This makes the closed fist much easier to detect.
+============================================================ */
+
+function dist(a,b){
+  return Math.hypot(a.x-b.x,a.y-b.y);
+}
+
+function recognizeGesture(lm){
+
+  const wrist=lm[0];
+
+  /*
+    Palm size = wrist to middle MCP.
+    This normalizes the measurement for different distances
+    from the camera.
+  */
+  const palm=Math.max(dist(lm[0],lm[9]),0.001);
+
+  /*
+    Finger curl ratio:
+    fingertip-to-wrist compared with PIP-to-wrist.
+
+    When extended, tip is farther from wrist.
+    When curled, tip comes back toward palm.
+  */
+  const indexExtended =
+    dist(lm[8],wrist) > dist(lm[6],wrist)*1.10;
+
+  const middleExtended =
+    dist(lm[12],wrist) > dist(lm[10],wrist)*1.10;
+
+  const ringExtended =
+    dist(lm[16],wrist) > dist(lm[14],wrist)*1.10;
+
+  const pinkyExtended =
+    dist(lm[20],wrist) > dist(lm[18],wrist)*1.10;
+
+  const extendedCount =
+    [indexExtended,middleExtended,ringExtended,pinkyExtended]
+      .filter(Boolean).length;
+
+
+  /* ==========================================================
+     FIST
+     Four main fingers curled.
+  ========================================================== */
+
+  if(extendedCount===0){
+    return "FIST";
+  }
+
+
+  /* ==========================================================
+     PEACE
+  ========================================================== */
+
+  if(
+    indexExtended &&
+    middleExtended &&
+    !ringExtended &&
+    !pinkyExtended
+  ){
+    return "PEACE";
+  }
+
+
+  /* ==========================================================
+     OPEN HAND
+  ========================================================== */
+
+  if(extendedCount===4){
+    return "OPEN";
+  }
+
+
+  return "NONE";
+}
+
+
+/* ============================================================
+   GESTURE STABILITY
+============================================================ */
+
+function processGesture(g){
+
+  if(g==="NONE"){
+    return;
+  }
+
+  if(g!==candidateGesture){
+    candidateGesture=g;
+    candidateSince=performance.now();
+    return;
+  }
+
+  if(
+    performance.now()-candidateSince>=HOLD_MS &&
+    currentGesture!==candidateGesture
+  ){
+    currentGesture=candidateGesture;
+    trigger(currentGesture);
+  }
+}
+
+
+/* ============================================================
+   TRIGGER
+============================================================ */
+
+function trigger(g){
+
+  if(g==="PEACE"){
+    hideLetter();
+    status.innerText="❤️ Heart Formed!";
+    createHeart(520);
+  }
+
+  else if(g==="FIST"){
+    hideLetter();
+    status.innerText="💖 I LOVE YOU";
+    createILoveYou();
+  }
+
+  else if(g==="OPEN"){
+    particles=[];
+    status.innerText="💌 A message for you...";
+    showLetter();
+  }
+}
+
+
+/* ============================================================
+   MEDIAPIPE RESULTS
+============================================================ */
+
+function onResults(results){
+
+  ctx.clearRect(0,0,W,H);
+
+  if(
+    results.multiHandLandmarks &&
+    results.multiHandLandmarks.length
+  ){
+    const lm=results.multiHandLandmarks[0];
+    processGesture(recognizeGesture(lm));
+  }else{
+    status.innerText="I-angat ang kamay ✋";
+  }
+
+  for(const p of particles){
+    p.update();
+    p.draw();
+  }
+}
+
+
+/* ============================================================
+   MEDIAPIPE
+============================================================ */
+
+const hands=new Hands({
+  locateFile:file =>
+    `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+});
+
+hands.setOptions({
+  maxNumHands:1,
+  modelComplexity:1,
+  minDetectionConfidence:.65,
+  minTrackingConfidence:.65
+});
+
+hands.onResults(onResults);
+
+
+/* ============================================================
+   CAMERA
+============================================================ */
+
+async function startCamera(){
+
+  errorEl.textContent="";
+  startButton.disabled=true;
+  startButton.textContent="Opening Camera...";
+
+  try{
+
+    if(
+      !navigator.mediaDevices ||
+      !navigator.mediaDevices.getUserMedia
+    ){
+      throw new Error("Camera API is not supported.");
+    }
+
+    stream=await navigator.mediaDevices.getUserMedia({
+      video:{
+        facingMode:"user",
+        width:{ideal:640},
+        height:{ideal:480}
+      },
+      audio:false
+    });
+
+    video.srcObject=stream;
+    await video.play();
+
+    camera=new Camera(video,{
+      onFrame:async()=>{
+        await hands.send({image:video});
+      },
+      width:640,
+      height:480
+    });
+
+    camera.start();
+
+    startScreen.style.display="none";
+    status.innerText="I-angat ang kamay ✋";
+
+  }catch(err){
+
+    console.error(err);
+
+    startButton.disabled=false;
+    startButton.textContent="Try Again 📷";
+
+    if(err.name==="NotAllowedError"){
+      errorEl.textContent=
+        "❌ Camera permission denied. Allow camera access sa browser settings.";
+    }else if(err.name==="NotFoundError"){
+      errorEl.textContent="❌ Walang camera na nakita.";
+    }else if(err.name==="NotReadableError"){
+      errorEl.textContent="❌ Ginagamit ng ibang app ang camera.";
+    }else if(err.name==="SecurityError"){
+      errorEl.textContent=
+        "❌ Camera blocked. Siguraduhing HTTPS ang GitHub Pages.";
+    }else{
+      errorEl.textContent="❌ Camera error: "+err.message;
+    }
+  }
+}
+
+startButton.addEventListener("click",startCamera);
+
+
+/* Initial visual */
+createHeart(250);
+
+</script>
+</body>
+</html>
