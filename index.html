@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width,
+        initial-scale=1.0,
+        maximum-scale=1.0,
+        user-scalable=no"
+    >
+
+    <title>Hand Tracking Magic ❤️</title>
+
+
+    <!-- =========================
+         STYLE
+    ========================== -->
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+        html,
+        body {
+
+            margin: 0;
+            padding: 0;
+
+            width: 100%;
+            height: 100%;
+
+            overflow: hidden;
+
+            background: #050505;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+        }
+
+
+        /* =========================
+           CAMERA
+        ========================== */
+
+        video {
+
+            display: none;
+        }
+
+
+        /* =========================
+           PARTICLE CANVAS
+        ========================== */
+
+        canvas {
+
+            position: fixed;
+
+            top: 0;
+            left: 0;
+
+            width: 100%;
+            height: 100%;
+
+            transform:
+                scaleX(-1);
+
+            z-index: 1;
+        }
+
+
+        /* =========================
+           STATUS
+        ========================== */
+
+        #status {
+
+            position: fixed;
+
+            top: 20px;
+            left: 0;
+
+            width: 100%;
+
+            padding:
+                0 20px;
+
+            text-align: center;
+
+            color: #ffb6c1;
+
+            font-size: 16px;
+
+            line-height: 1.5;
+
+            text-shadow:
+                0 0 10px
+                rgba(
+                    255,
+                    182,
+                    193,
+                    0.8
+                );
+
+            z-index: 10;
+
+            pointer-events: none;
+
+            transition:
+                opacity 0.3s ease;
+        }
+
+
+        /* =========================
+           START SCREEN
+        ========================== */
+
+        #startScreen {
+
+            position: fixed;
+
+            inset: 0;
+
+            z-index: 20;
+
+            display: flex;
+
+            flex-direction: column;
+
+            justify-content: center;
+
+            align-items: center;
+
+            padding: 30px;
+
+            text-align: center;
+
+            background:
+
+                radial-gradient(
+                    circle at center,
+                    rgba(
+                        255,
+                        77,
+                        109,
+                        0.18
+                    ),
+                    transparent 45%
+                ),
+
+                #050505;
+        }
+
+
+        #startScreen h1 {
+
+            margin: 0 0 12px;
+
+            color: #ff4d6d;
+
+            font-size: 30px;
+
+            text-shadow:
+                0 0 20px
+                rgba(
+                    255,
+                    77,
+                    109,
+                    0.5
+                );
+        }
+
+
+        #startScreen p {
+
+            color: #ddd;
+
+            max-width: 330px;
+
+            line-height: 1.6;
+
+            font-size: 15px;
+        }
+
+
+        /* =========================
+           START BUTTON
+        ========================== */
+
+        #startButton {
+
+            margin-top: 20px;
+
+            padding:
+                15px 30px;
+
+            border: none;
+
+            border-radius: 30px;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #ff4d6d,
+                    #ff758f
+                );
+
+            color: white;
+
+            font-size: 17px;
+
+            font-weight: bold;
+
+            box-shadow:
+                0 0 30px
+                rgba(
+                    255,
+                    77,
+                    109,
+                    0.5
+                );
+
+            cursor: pointer;
+
+            transition:
+                transform 0.2s ease;
+        }
+
+
+        #startButton:active {
+
+            transform:
+                scale(0.94);
+        }
+
+
+        #startButton:disabled {
+
+            opacity: 0.6;
+
+            cursor:
+                not-allowed;
+        }
+
+
+        /* =========================
+           ERROR
+        ========================== */
+
+        #error {
+
+            margin-top: 20px;
+
+            max-width: 320px;
+
+            color: #ff8fa3;
+
+            font-size: 14px;
+
+            line-height: 1.5;
+        }
+
+    </style>
+
+
+    <!-- =========================
+         MEDIAPIPE
+    ========================== -->
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"
+        crossorigin="anonymous">
+    </script>
+
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"
+        crossorigin="anonymous">
+    </script>
+
+</head>
+
+
+<body>
+
+
+    <!-- =========================
+         START SCREEN
+    ========================== -->
+
+    <div id="startScreen">
+
+        <h1>
+            ❤️ Hand Tracking Magic
+        </h1>
+
+
+        <p>
+
+            Gamitin ang kamay mo
+            para kontrolin ang particles.
+
+            <br><br>
+
+            ✌️ Peace → ❤️ Heart
+
+            <br>
+
+            ✊ Fist → 💖 I LOVE YOU
+
+            <br>
+
+            🖐️ Open Hand → 💌 Love Letter
+
+        </p>
+
+
+        <button id="startButton">
+
+            Open Camera 📷
+
+        </button>
+
+
+        <div id="error"></div>
+
+    </div>
+
+
+
+    <!-- =========================
+         STATUS
+    ========================== -->
+
+    <div id="status">
+
+        I-angat ang kamay sa camera ✋
+
+    </div>
+
+
+
+    <!-- =========================
+         VIDEO
+    ========================== -->
+
+    <video
+        id="webcam"
+        autoplay
+        playsinline
+        muted>
+    </video>
+
+
+
+    <!-- =========================
+         CANVAS
+    ========================== -->
+
+    <canvas id="canvas"></canvas>
+
+
+
+<script>
+
+
+/* =========================================================
+   ELEMENTS
+========================================================= */
+
+const videoElement =
+    document.getElementById(
+        "webcam"
+    );
+
+const canvasElement =
+    document.getElementById(
+        "canvas"
+    );
+
+const canvasCtx =
+    canvasElement.getContext(
+        "2d"
+    );
+
+const statusEl =
+    document.getElementById(
+        "status"
+    );
+
+const startScreen =
+    document.getElementById(
+        "startScreen"
+    );
+
+const startButton =
+    document.getElementById(
+        "startButton"
+    );
+
+const errorEl =
+    document.getElementById(
+        "error"
+    );
+
+
+
+/* =========================================================
+   VARIABLES
+========================================================= */
+
+let width = 0;
+let height = 0;
+
+let particles = [];
+
+let currentGesture = "NONE";
+
+let detectedGesture = "NONE";
+
+let gestureStartTime = 0;
+
+
+/*
+    Gesture must remain stable for
+    this amount of milliseconds
+    before changing the animation.
+*/
+
+const GESTURE_HOLD_TIME = 350;
+
+
+
+/* =========================================================
+   LOVE LETTER
+========================================================= */
+
+const loveLetter =
+    "Hi mahal! ❤️ Sana magustuhan mo 'to. " +
+    "Ginawa ko 'to para sa'yo. " +
+    "Ikaw ang nagpapasaya sa araw-araw ko. " +
+    "I love you! ❤️";
+
+
+
+/* =========================================================
+   RESIZE CANVAS
+========================================================= */
+
+function resizeCanvas() {
+
+    width =
+        window.innerWidth;
+
+    height =
+        window.innerHeight;
+
+
+    canvasElement.width =
+        width;
+
+    canvasElement.height =
+        height;
+}
+
+
+window.addEventListener(
+    "resize",
+    resizeCanvas
+);
+
+resizeCanvas();
+
+
+
+/* =========================================================
+   PARTICLE CLASS
+========================================================= */
+
+class Particle {
+
+
+    constructor(
+        targetX,
+        targetY,
+        color
+    ) {
+
+        this.x =
+            Math.random() *
+            width;
+
+        this.y =
+            Math.random() *
+            height;
+
+
+        this.targetX =
+            targetX;
+
+        this.targetY =
+            targetY;
+
+
+        this.vx = 0;
+        this.vy = 0;
+
+
+        this.color =
+            color;
+
+
+        this.size =
+            Math.random() *
+            2.5 + 1;
+
+
+        this.alpha =
+            Math.random() *
+            0.5 + 0.5;
+    }
+
+
+
+    update() {
+
+        const dx =
+            this.targetX -
+            this.x;
+
+        const dy =
+            this.targetY -
+            this.y;
+
+
+        /*
+            Smooth movement.
+        */
+
+        this.vx =
+            dx * 0.075;
+
+        this.vy =
+            dy * 0.075;
+
+
+        this.x +=
+            this.vx;
+
+        this.y +=
+            this.vy;
+    }
+
+
+
+    draw() {
+
+        canvasCtx.globalAlpha =
+            this.alpha;
+
+
+        canvasCtx.fillStyle =
+            this.color;
+
+
+        canvasCtx.shadowBlur =
+            12;
+
+
+        canvasCtx.shadowColor =
+            this.color;
+
+
+        canvasCtx.beginPath();
+
+
+        canvasCtx.arc(
+
+            this.x,
+            this.y,
+            this.size,
+            0,
+            Math.PI * 2
+
+        );
+
+
+        canvasCtx.fill();
+
+
+        canvasCtx.shadowBlur =
+            0;
+
+        canvasCtx.globalAlpha =
+            1;
+    }
+
+}
+
+
+
+/* =========================================================
+   ❤️ CREATE HEART
+========================================================= */
+
+function createHeartShape(
+    count = 450
+) {
+
+    particles = [];
+
+
+    const scale =
+        Math.min(
+            width,
+            height
+        ) / 35;
+
+
+    for (
+        let i = 0;
+        i < count;
+        i++
+    ) {
+
+
+        const t =
+            Math.random() *
+            Math.PI * 2;
+
+
+        /*
+            Parametric heart
+        */
+
+        const x =
+            16 *
+            Math.pow(
+                Math.sin(t),
+                3
+            );
+
+
+        const y =
+            -(
+                13 *
+                Math.cos(t)
+
+                -
+
+                5 *
+                Math.cos(
+                    2 * t
+                )
+
+                -
+
+                2 *
+                Math.cos(
+                    3 * t
+                )
+
+                -
+
+                Math.cos(
+                    4 * t
+                )
+            );
+
+
+        /*
+            Add some randomness
+            inside the heart.
+        */
+
+        const randomScale =
+            0.82 +
+            Math.random() *
+            0.25;
+
+
+        const targetX =
+            width / 2 +
+            x *
+            scale *
+            randomScale;
+
+
+        const targetY =
+            height / 2 +
+            y *
+            scale *
+            randomScale;
+
+
+        particles.push(
+
+            new Particle(
+                targetX,
+                targetY,
+                "#ff4d6d"
+            )
+
+        );
+
+    }
+
+}
+
+
+
+/* =========================================================
+   💖 CREATE I LOVE YOU
+========================================================= */
+
+function createILoveYou() {
+
+    particles = [];
+
+
+    const tempCanvas =
+        document.createElement(
+            "canvas"
+        );
+
+
+    const tempCtx =
+        tempCanvas.getContext(
+            "2d"
+        );
+
+
+    tempCanvas.width =
+        width;
+
+    tempCanvas.height =
+        height;
+
+
+    /*
+        Responsive font size.
+    */
+
+    const fontSize =
+        Math.min(
+            width * 0.15,
+            85
+        );
+
+
+    tempCtx.fillStyle =
+        "white";
+
+
+    tempCtx.font =
+        `bold ${fontSize}px Arial`;
+
+
+    tempCtx.textAlign =
+        "center";
+
+
+    tempCtx.textBaseline =
+        "middle";
+
+
+    tempCtx.fillText(
+
+        "I LOVE YOU",
+
+        width / 2,
+
+        height / 2
+
+    );
+
+
+    createParticlesFromCanvas(
+
+        tempCanvas,
+        tempCtx,
+        "#ff4d6d",
+        5
+
+    );
+
+}
+
+
+
+/* =========================================================
+   💌 CREATE LOVE LETTER
+========================================================= */
+
+function createLoveLetter() {
+
+    particles = [];
+
+
+    const tempCanvas =
+        document.createElement(
+            "canvas"
+        );
+
+
+    const tempCtx =
+        tempCanvas.getContext(
+            "2d"
+        );
+
+
+    tempCanvas.width =
+        width;
+
+    tempCanvas.height =
+        heig
+
+
+    /*
+        Responsive font.
+    */
+
+    const fontSize =
+        Math.max(
+            17,
+            Math.min(
+                width / 18,
+                27
+            )
+        );
+
+
+    tempCtx.fillStyle =
+        "white";
+
+
+    tempCtx.font =
+        `bold ${fontSize}px Arial`;
+
+
+    tempCtx.textAlign =
+        "left";
+
+
+    tempCtx.textBaseline =
+        "top";
+
+
+    const words =
+        loveLetter.split(" ");
+
+
+    const maxWidth =
+        width - 50;
+
+
+    const lineHeight =
+        fontSize + 14;
+
+
+    let line = "";
+
+    let lines = [];
+
+
+    /*
+        Word wrapping.
+    */
+
+    for (
+        let i = 0;
+        i < words.length;
+        i++
+    ) {
+
+        const testLine =
+            line +
+            words[i] +
+            " ";
+
+
+        const metrics =
+            tempCtx.measureText(
+                testLine
+            );
+
+
+        if (
+            metrics.width >
+                maxWidth
+            &&
+            line !== ""
+        ) {
+
+            lines.push(
+                line
+            );
+
+
+            line =
+                words[i] +
+                " ";
+
+        } else {
+
+            line =
+                testLine;
+        }
+
+    }
+
+
+    lines.push(
+        line
+    );
+
+
+    /*
+        Draw lines.
+    */
+
+    const totalHeight =
+        lines.length *
+        lineHeight;
+
+
+    let startY =
+        (height -
+        totalHeight) /
+        2;
+
+
+    /*
+        Keep it away
+        from the status.
+    */
+
+    startY =
+        Math.max(
+            100,
+            startY
+        );
+
+
+    lines.forEach(
+        (
+            lineText,
+            index
+        ) => {
+
+            tempCtx.fillText(
+
+                lineText,
+
+                25,
+
+                startY +
+                index *
+                lineHeight
+
+            );
+
+        }
+    );
+
+
+    createParticlesFromCanvas(
+
+        tempCanvas,
+        tempCtx,
+        "#00ffff",
+        5
+
+    );
+
+}
+
+
+
+/* =========================================================
+   CREATE PARTICLES FROM TEXT
+========================================================= */
+
+function createParticlesFromCanvas(
+
+    tempCanvas,
+    tempCtx,
+    color,
+    gap
+
+) {
+
+
+    const imageData =
+        tempCtx.getImageData(
+
+            0,
+            0,
+            width,
+            height
+
+        );
+
+
+    const pixels =
+        imageData.data;
+
+
+    for (
+        let y = 0;
+        y < height;
+        y += gap
+    ) {
+
+
+        for (
+            let x = 0;
+            x < width;
+            x += gap
+        ) {
+
+
+            const index =
+                (
+                    y *
+                    width +
+                    x
+                ) * 4;
+
+
+            const alpha =
+                pixels[
+                    index + 3
+                ];
+
+
+            if (
+                alpha > 128
+            ) {
+
+
+                particles.push(
+
+                    new Particle(
+
+                        x,
+                        y,
+                        color
+
+                    )
+
+                );
+
+            }
+
+        }
+
+    }
+
+}
+
+
+
+/* =========================================================
+   ✋ GESTURE RECOGNITION
+========================================================= */
+
+function recognizeGesture(
+    landmarks
+) {
+
+
+    /*
+        Calculate whether
+        each finger is extended.
+    */
+
+    function isExtended(
+        tip,
+        base
+    ) {
+
+
+        const tipDistance =
+            Math.hypot(
+
+                landmarks[tip].x -
+                landmarks[0].x,
+
+                landmarks[tip].y -
+                landmarks[0].y
+
+            );
+
+
+        const baseDistance =
+            Math.hypot(
+
+                landmarks[base].x -
+                landmarks[0].x,
+
+                landmarks[base].y -
+                landmarks[0].y
+
+            );
+
+
+        return (
+            tipDistance >
+            baseDistance * 1.15
+        );
+
+    }
+
+
+    const indexUp =
+        isExtended(
+            8,
+            6
+        );
+
+
+    const middleUp =
+        isExtended(
+            12,
+            10
+        );
+
+
+    const ringUp =
+        isExtended(
+            16,
+            14
+        );
+
+
+    const pinkyUp =
+        isExtended(
+            20,
+            18
+        );
+
+
+
+    /* =========================
+       ✌️ PEACE
+    ========================== */
+
+    if (
+
+        indexUp &&
+        middleUp &&
+        !ringUp &&
+        !pinkyUp
+
+    ) {
+
+        return "PEACE";
+
+    }
+
+
+
+    /* =========================
+       ✊ FIST
+    ========================== */
+
+    if (
+
+        !indexUp &&
+        !middleUp &&
+        !ringUp &&
+        !pinkyUp
+
+    ) {
+
+        return "FIST";
+
+    }
+
+
+
+    /* =========================
+       🖐️ OPEN HAND
+    ========================== */
+
+    if (
+
+        indexUp &&
+        middleUp &&
+        ringUp &&
+        pinkyUp
+
+    ) {
+
+        return "OPEN";
+
+    }
+
+
+
+    return "NONE";
+
+}
+
+
+
+/* =========================================================
+   GESTURE SMOOTHING
+========================================================= */
+
+function processGesture(
+    gesture
+) {
+
+
+    /*
+        Ignore uncertain gesture.
+    */
+
+    if (
+        gesture === "NONE"
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+        New gesture detected.
+    */
+
+    if (
+        gesture !==
+        detectedGesture
+    ) {
+
+        detectedGesture =
+            gesture;
+
+
+        gestureStartTime =
+            performance.now();
+
+
+        return;
+
+    }
+
+
+    /*
+        Check how long
+        gesture stayed stable.
+    */
+
+    const elapsed =
+        performance.now() -
+        gestureStartTime;
+
+
+    if (
+
+        elapsed >=
+        GESTURE_HOLD_TIME
+
+        &&
+
+        currentGesture !==
+        detectedGesture
+
+    ) {
+
+        currentGesture =
+            detectedGesture;
+
+
+        triggerGesture(
+            currentGesture
+        );
+
+    }
+
+}
+
+
+
+/* =========================================================
+   🎯 TRIGGER ANIMATION
+========================================================= */
+
+function triggerGesture(
+    gesture
+) {
+
+
+    /* =========================
+       ❤️ PEACE
+    ========================== */
+
+    if (
+        gesture ===
+        "PEACE"
+    ) {
+
+        statusEl.innerText =
+            "❤️ Heart Formed!";
+
+        createHeartShape(
+            450
+        );
+
+    }
+
+
+
+    /* =========================
+       💖 FIST
+    ========================== */
+
+    else if (
+        gesture ===
+        "FIST"
+    ) {
+
+        statusEl.innerText =
+            "💖 I LOVE YOU";
+
+        createILoveYou();
+
+    }
+
+
+
+    /* =========================
+       💌 OPEN HAND
+    ========================== */
+
+    else if (
+        gesture ===
+        "OPEN"
+    ) {
+
+        statusEl.innerText =
+            "💌 Letter Unlocked!";
+
+        createLoveLetter();
+
+    }
+
+}
+
+
+
+/* =========================================================
+   🎥 MEDIAPIPE RESULTS
+========================================================= */
+
+function onResults(
+    results
+) {
+
+
+    /*
+        Clear canvas.
+    */
+
+    canvasCtx.clearRect(
+
+        0,
+        0,
+        width,
+        height
+
+    );
+
+
+    /*
+        Check if hand exists.
+    */
+
+    if (
+
+        results.multiHandLandmarks
+        &&
+
+        results.multiHandLandmarks
+            .length > 0
+
+    ) {
+
+
+        const landmarks =
+            results
+                .multiHandLandmarks[0];
+
+
+        const gesture =
+            recognizeGesture(
+                landmarks
+            );
+
+
+        processGesture(
+            gesture
+        );
+
+
+    } else {
+
+
+        /*
+            Don't immediately
+            destroy the current
+           
