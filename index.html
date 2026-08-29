@@ -197,6 +197,683 @@ at sa happiness na binibigay mo saakinnn!
 I hope this little thing
 makes you smile today.
 
+I love you tut and I miss you so muchh!!`;
+
+
+/* =========================================================
+   ELEMENTS
+========================================================= */
+
+const video=document.getElementById("webcam");
+const canvas=document.getElementById("canvas");
+const ctx=canvas.getContext("2d");
+
+const status=document.getElementById("status");
+const startScreen=document.getElementById("startScreen");
+const startButton=document.getElementById("startButton");
+const errorEl=document.getElementById("error");
+
+const letterOverlay=document.getElementById("letterOverlay");
+const letterText=document.getElementById("letterText");
+const letterClose=document.getElementById("letterClose");
+
+
+/* =========================================================
+   STATE
+========================================================= */
+
+let W=0,H=0;
+let particles=[];
+
+let currentGesture="NONE";
+let candidateGesture="NONE";
+let candidateSince=0;
+
+let cameraStarted=false;
+const HOLD_MS=500;
+
+
+/* =========================================================
+   RESIZE
+========================================================= */
+
+function resize(){
+    W=window.innerWidth;
+    H=window.innerHeight;
+    canvas.width=W;
+    canvas.height=H;
+}
+window.addEventListener("resize",resize);
+resize();
+
+
+/* =========================================================
+   PARTICLE
+========================================================= */
+
+class Particle{
+    constructor(x,y,color){
+        this.x=Math.random()*W;
+        this.y=Math.random()*H;
+        this.tx=x;
+        this.ty=y;
+        this.color=color;
+        this.size=Math.random()*2.4+1;
+        this.alpha=.55+Math.random()*.45;
+    }
+
+    update(){
+        this.x+=(this.tx-this.x)*.075;
+        this.y+=(this.ty-this.y)*.075;
+    }
+
+    draw(){
+        ctx.globalAlpha=this.alpha;
+        ctx.fillStyle=this.color;
+        ctx.shadowBlur=11;
+        ctx.shadowColor=this.color;
+        ctx.beginPath();
+        ctx.arc(this.x,this.y,this.size,0,Math.PI*2);
+        ctx.fill();
+        ctx.shadowBlur=0;
+        ctx.globalAlpha=1;
+    }
+}
+
+
+/* =========================================================
+   HEART
+========================================================= */
+
+function createHeart(count=520){
+    particles=[];
+
+    const scale=Math.min(W,H)/35;
+
+    for(let i=0;i<count;i++){
+        const t=Math.random()*Math.PI*2;
+
+        const x=16*Math.pow(Math.sin(t),3);
+
+        const y=-(
+            13*Math.cos(t)
+            -5*Math.cos(2*t)
+            -2*Math.cos(3*t)
+            -Math.cos(4*t)
+        );
+
+        const s=.82+Math.random()*.25;
+
+        particles.push(
+            new Particle(
+                W/2+x*scale*s,
+                H/2+y*scale*s,
+                "#ff4d6d"
+            )
+        );
+    }
+}
+
+
+/* =========================================================
+   I LOVE YOU PARTICLES
+========================================================= */
+
+function createILoveYou(){
+
+    particles=[];
+
+    const temp=document.createElement("canvas");
+    const tempCtx=temp.getContext("2d");
+
+    temp.width=W;
+    temp.height=H;
+
+    const fontSize=Math.min(W*.14,82);
+
+    tempCtx.fillStyle="white";
+    tempCtx.font=`bold ${fontSize}px Arial`;
+    tempCtx.textAlign="center";
+    tempCtx.textBaseline="middle";
+
+    /*
+      No mirroring is applied to the canvas.
+      Therefore I LOVE YOU is readable normally.
+    */
+    tempCtx.fillText(
+        "I LOVE YOU",
+        W/2,
+        H/2
+    );
+
+    const pixels=tempCtx.getImageData(
+        0,0,W,H
+    ).data;
+
+    for(let y=0;y<H;y+=5){
+        for(let x=0;x<W;x+=5){
+
+            const index=(y*W+x)*4;
+
+            if(pixels[index+3]>128){
+
+                particles.push(
+                    new Particle(
+                        x,y,"#ff4d6d"
+                    )
+                );
+            }
+        }
+    }
+}
+
+
+/* =========================================================
+   LETTER
+========================================================= */
+
+function showLetter(){
+    letterText.textContent=loveLetter.trim();
+    letterOverlay.classList.add("show");
+}
+
+function hideLetter(){
+    letterOverlay.classList.remove("show");
+}
+
+letterClose.addEventListener(
+    "click",
+    hideLetter
+);
+
+
+/* =========================================================
+   GESTURE DETECTION
+========================================================= */
+
+function distance(a,b){
+    return Math.hypot(
+        a.x-b.x,
+        a.y-b.y
+    );
+}
+
+function recognizeGesture(lm){
+
+    const wrist=lm[0];
+
+    const indexUp=
+        distance(lm[8],wrist)>
+        distance(lm[6],wrist)*1.10;
+
+    const middleUp=
+        distance(lm[12],wrist)>
+        distance(lm[10],wrist)*1.10;
+
+    const ringUp=
+        distance(lm[16],wrist)>
+        distance(lm[14],wrist)*1.10;
+
+    const pinkyUp=
+        distance(lm[20],wrist)>
+        distance(lm[18],wrist)*1.10;
+
+    const count=[
+        indexUp,
+        middleUp,
+        ringUp,
+        pinkyUp
+    ].filter(Boolean).length;
+
+    /* FIST */
+    if(count===0){
+        return "FIST";
+    }
+
+    /* PEACE */
+    if(
+        indexUp &&
+        middleUp &&
+        !ringUp &&
+        !pinkyUp
+    ){
+        return "PEACE";
+    }
+
+    /* OPEN */
+    if(count===4){
+        return "OPEN";
+    }
+
+    return "NONE";
+}
+
+
+/* =========================================================
+   GESTURE STABILITY
+========================================================= */
+
+function processGesture(gesture){
+
+    if(gesture==="NONE"){
+        return;
+    }
+
+    if(gesture!==candidateGesture){
+
+        candidateGesture=gesture;
+        candidateSince=performance.now();
+
+        return;
+    }
+
+    if(
+        performance.now()-candidateSince>=HOLD_MS &&
+        currentGesture!==candidateGesture
+    ){
+
+        currentGesture=candidateGesture;
+
+        triggerGesture(
+            currentGesture
+        );
+    }
+}
+
+
+/* =========================================================
+   TRIGGER
+========================================================= */
+
+function triggerGesture(gesture){
+
+    /* PEACE */
+    if(gesture==="PEACE"){
+
+        hideLetter();
+
+        status.textContent=
+            "❤️ Heart Formed!";
+
+        createHeart(520);
+    }
+
+    /* FIST */
+    else if(gesture==="FIST"){
+
+        hideLetter();
+
+        status.textContent=
+            "💖 I LOVE YOU";
+
+        createILoveYou();
+    }
+
+    /* OPEN */
+    else if(gesture==="OPEN"){
+
+        particles=[];
+
+        status.textContent=
+            "💌 A message for you...";
+
+        showLetter();
+    }
+}
+
+
+/* =========================================================
+   MEDIAPIPE RESULTS
+========================================================= */
+
+function onResults(results){
+
+    ctx.clearRect(
+        0,0,W,H
+    );
+
+    if(
+        results.multiHandLandmarks &&
+        results.multiHandLandmarks.length>0
+    ){
+
+        const landmarks=
+            results.multiHandLandmarks[0];
+
+        processGesture(
+            recognizeGesture(landmarks)
+        );
+
+    }else{
+
+        status.textContent=
+            "I-angat ang kamay ✋";
+    }
+
+    particles.forEach(p=>{
+        p.update();
+        p.draw();
+    });
+}
+
+
+/* =========================================================
+   MEDIAPIPE
+========================================================= */
+
+const hands=new Hands({
+    locateFile:file=>
+        `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+});
+
+hands.setOptions({
+    maxNumHands:1,
+    modelComplexity:1,
+    minDetectionConfidence:.65,
+    minTrackingConfidence:.65
+});
+
+hands.onResults(onResults);
+
+
+/* =========================================================
+   CAMERA
+========================================================= */
+
+async function startCamera(){
+
+    if(cameraStarted){
+        return;
+    }
+
+    errorEl.textContent="";
+
+    startButton.disabled=true;
+    startButton.textContent=
+        "Opening Camera...";
+
+    try{
+
+        if(
+            !navigator.mediaDevices ||
+            !navigator.mediaDevices.getUserMedia
+        ){
+            throw new Error(
+                "Camera API is not supported."
+            );
+        }
+
+        const mediaStream=
+            await navigator.mediaDevices.getUserMedia({
+
+                video:{
+                    facingMode:"user",
+                    width:{ideal:640},
+                    height:{ideal:480}
+                },
+
+                audio:false
+            });
+
+        video.srcObject=mediaStream;
+
+        await video.play();
+
+        const camera=
+            new Camera(
+                video,
+                {
+                    onFrame:async()=>{
+                        await hands.send({
+                            image:video
+                        });
+                    },
+                    width:640,
+                    height:480
+                }
+            );
+
+        camera.start();
+
+        cameraStarted=true;
+
+        startScreen.style.display="none";
+
+        status.textContent=
+            "I-angat ang kamay ✋";
+
+    }catch(error){
+
+        console.error(
+            "Camera Error:",
+            error
+        );
+
+        startButton.disabled=false;
+        startButton.textContent=
+            "Open Camera 📷";
+
+        if(
+            error.name==="NotAllowedError"
+        ){
+
+            errorEl.textContent=
+                "❌ Camera permission denied. " +
+                "Allow camera access sa browser settings.";
+
+        }else if(
+            error.name==="NotFoundError"
+        ){
+
+            errorEl.textContent=
+                "❌ Walang camera na nakita.";
+
+        }else if(
+            error.name==="NotReadableError"
+        ){
+
+            errorEl.textContent=
+                "❌ Ginagamit ng ibang app ang camera.";
+
+        }else if(
+            error.name==="SecurityError"
+        ){
+
+            errorEl.textContent=
+                "❌ Camera blocked. " +
+                "Make sure GitHub Pages uses HTTPS.";
+
+        }else{
+
+            errorEl.textContent=
+                "❌ Camera error: "+
+                error.message;
+        }
+    }
+}
+
+
+/* =========================================================
+   OPEN CAMERA BUTTON
+   ONLY ONE EVENT HANDLER.
+========================================================= */
+
+startButton.addEventListener(
+    "click",
+    startCamera
+);
+
+
+/* Initial state */
+createHeart(250);
+
+</script>
+
+</body>
+</html>
+    background:
+      radial-gradient(circle at center,rgba(255,77,109,.22),transparent 45%),
+      #050505;
+    pointer-events:auto;
+}
+
+#startScreen h1{
+    margin:0 0 12px;color:#ff4d6d;font-size:30px;
+    text-shadow:0 0 20px rgba(255,77,109,.5);
+}
+#startScreen p{
+    margin:0;color:#ddd;max-width:330px;
+    line-height:1.65;font-size:15px;
+}
+
+#startButton{
+    display:block;
+    position:relative;
+    z-index:1001;
+    margin-top:22px;
+    padding:15px 30px;
+    min-width:190px;
+    min-height:52px;
+    border:0;border-radius:30px;
+    background:linear-gradient(135deg,#ff4d6d,#ff758f);
+    color:#fff;font-size:17px;font-weight:bold;
+    box-shadow:0 0 30px rgba(255,77,109,.5);
+    cursor:pointer;
+    pointer-events:auto;
+    touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;
+    -webkit-user-select:none;
+    user-select:none;
+}
+#startButton:active{transform:scale(.96)}
+#startButton:disabled{opacity:.65;cursor:wait}
+
+#error{
+    margin-top:18px;max-width:330px;
+    color:#ff8fa3;font-size:14px;line-height:1.5;
+}
+
+/* LETTER */
+#letterOverlay{
+    position:fixed;inset:0;z-index:500;
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;
+    background:rgba(0,0,0,.35);
+    backdrop-filter:blur(3px);
+    opacity:0;visibility:hidden;
+    pointer-events:none;
+    transition:opacity .35s ease,visibility .35s ease;
+}
+#letterOverlay.show{
+    opacity:1;visibility:visible;pointer-events:auto;
+}
+#letterBox{
+    width:min(92vw,430px);
+    max-height:75vh;
+    overflow-y:auto;
+    overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+    touch-action:pan-y;
+    padding:30px 25px;
+    border:1px solid rgba(255,255,255,.25);
+    border-radius:22px;
+    background:
+      linear-gradient(145deg,rgba(255,255,255,.15),rgba(255,255,255,.06)),
+      rgba(20,10,18,.96);
+    box-shadow:0 20px 70px rgba(0,0,0,.65),0 0 35px rgba(255,77,109,.28);
+    backdrop-filter:blur(14px);
+    transform:scale(.65) translateY(35px);
+    transition:transform .48s cubic-bezier(.2,.85,.25,1.2);
+    color:#fff;
+    scrollbar-width:thin;
+}
+#letterOverlay.show #letterBox{
+    transform:scale(1) translateY(0);
+}
+#letterBox::-webkit-scrollbar{width:7px}
+#letterBox::-webkit-scrollbar-track{
+    background:rgba(255,255,255,.06);border-radius:10px;
+}
+#letterBox::-webkit-scrollbar-thumb{
+    background:rgba(255,159,177,.6);border-radius:10px;
+}
+#letterHeart{text-align:center;font-size:38px;margin-bottom:8px}
+#letterTitle{
+    text-align:center;color:#ff9fb1;
+    font-size:21px;font-weight:bold;margin-bottom:20px;
+}
+#letterText{
+    white-space:pre-line;color:#fff;
+    font-size:16px;line-height:1.75;
+    overflow-wrap:break-word;
+}
+#letterClose{
+    display:block;margin:25px auto 0;
+    padding:11px 24px;min-width:55px;
+    border:1px solid rgba(255,255,255,.25);
+    border-radius:25px;background:rgba(255,77,109,.18);
+    color:#fff;font-size:16px;
+    cursor:pointer;touch-action:manipulation;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+</head>
+
+<body>
+
+<div id="startScreen">
+    <h1>❤️ For You</h1>
+    <p>
+        A little surprise made with love.
+        <br><br>
+        ✌️ Peace → ❤️ Heart
+        <br>
+        ✊ Fist → I LOVE YOU
+        <br>
+        🖐️ Open Hand → 💌 Letter
+    </p>
+    <button id="startButton" type="button">Open Camera 📷</button>
+    <div id="error"></div>
+</div>
+
+<div id="status">I-angat ang kamay ✋</div>
+
+<video id="webcam" autoplay playsinline muted></video>
+<canvas id="canvas"></canvas>
+
+<div id="letterOverlay">
+    <div id="letterBox">
+        <div id="letterHeart">💌</div>
+        <div id="letterTitle">A little message for you</div>
+        <div id="letterText"></div>
+        <button id="letterClose" type="button">❤️</button>
+    </div>
+</div>
+
+<script>
+
+/* =========================================================
+   💌 PALITAN ANG MESSAGE DITO
+========================================================= */
+
+const loveLetter = `Hi tutut ko!
+
+Sana magustuhan mo itong maliit
+na surprise na ginawa ko para sa'yo.
+
+Gusto ko lang malaman mo na
+sobrang special ka saakin!!
+
+Thank you sa lahat ng moments,
+sa smiles, sa laughs,
+at sa happiness na binibigay mo saakinnn!
+
+I hope this little thing
+makes you smile today.
+
 I love you tut!`;
 
 
