@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>For You ❤️</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#050505;font-family:Arial,Helvetica,sans-serif}
+video{display:none}
+canvas{position:fixed;inset:0;width:100%;height:100%;transform:scaleX(-1);z-index:1}
+#status{position:fixed;top:20px;left:0;width:100%;padding:0 20px;text-align:center;color:#ffb6c1;font-size:16px;line-height:1.5;text-shadow:0 0 10px rgba(255,182,193,.8);z-index:10;pointer-events:none}
+#startScreen{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:30px;text-align:center;background:radial-gradient(circle at center,rgba(255,77,109,.2),transparent 45%),#050505}
+#startScreen h1{margin:0 0 12px;color:#ff4d6d;font-size:30px;text-shadow:0 0 20px rgba(255,77,109,.5)}
+#startScreen p{color:#ddd;max-width:330px;line-height:1.6;font-size:15px}
+#startButton{margin-top:20px;padding:15px 30px;border:0;border-radius:30px;background:linear-gradient(135deg,#ff4d6d,#ff758f);color:white;font-size:17px;font-weight:bold;box-shadow:0 0 30px rgba(255,77,109,.5);cursor:pointer}
+#startButton:active{transform:scale(.94)}
+#startButton:disabled{opacity:.6}
+#error{margin-top:20px;max-width:320px;color:#ff8fa3;font-size:14px;line-height:1.5}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="startScreen">
+<h1>❤️ For You</h1>
+<p>
+A little surprise made with love.<br><br>
+✌️ Peace → ❤️ Heart<br>
+✊ Fist → I LOVE YOU<br>
+🖐️ Open Hand → 💌 Letter
+</p>
+<button id="startButton">Open Camera 📷</button>
+<div id="error"></div>
+</div>
+
+<div id="status">I-angat ang kamay ✋</div>
+<video id="webcam" autoplay playsinline muted></video>
+<canvas id="canvas"></canvas>
+
+<script>
+/* ============================================================
+   💌 ILAGAY ANG SARILI MONG MESSAGE DITO
+============================================================ */
+const loveLetter = `
+Hi mahal! ❤️
+
+Sana magustuhan mo itong maliit na surprise
+na ginawa ko para sa'yo.
+
+Gusto ko lang malaman mo na special ka sa akin.
+
+Thank you sa lahat ng moments, smiles,
+laughs, at happiness na binibigay mo.
+
+I hope this little thing makes you smile today.
+
+I love you! ❤️
+`;
+
+/* ============================================================ */
+const videoElement=document.getElementById("webcam");
+const canvasElement=document.getElementById("canvas");
+const canvasCtx=canvasElement.getContext("2d");
+const statusEl=document.getElementById("status");
+const startScreen=document.getElementById("startScreen");
+const startButton=document.getElementById("startButton");
+const errorEl=document.getElementById("error");
+
+let width=0,height=0,particles=[];
+let currentGesture="NONE";
+let candidateGesture="NONE";
+let candidateStartTime=0;
+const GESTURE_HOLD_TIME=450;
+
+function resizeCanvas(){
+  width=window.innerWidth;height=window.innerHeight;
+  canvasElement.width=width;canvasElement.height=height;
+}
+window.addEventListener("resize",resizeCanvas);
+resizeCanvas();
+
+class Particle{
+  constructor(targetX,targetY,color){
+    this.x=Math.random()*width;this.y=Math.random()*height;
+    this.targetX=targetX;this.targetY=targetY;
+    this.vx=0;this.vy=0;this.color=color;
+    this.size=Math.random()*2.5+1;
+    this.alpha=Math.random()*.5+.5;
+  }
+  update(){
+    const dx=this.targetX-this.x,dy=this.targetY-this.y;
+    this.vx=dx*.075;this.vy=dy*.075;
+    this.x+=this.vx;this.y+=this.vy;
+  }
+  draw(){
+    canvasCtx.globalAlpha=this.alpha;
+    canvasCtx.fillStyle=this.color;
+    canvasCtx.shadowBlur=12;canvasCtx.shadowColor=this.color;
+    canvasCtx.beginPath();
+    canvasCtx.arc(this.x,this.y,this.size,0,Math.PI*2);
+    canvasCtx.fill();
+    canvasCtx.shadowBlur=0;canvasCtx.globalAlpha=1;
+  }
+}
+
+function createHeartShape(count=500){
+  particles=[];
+  const scale=Math.min(width,height)/35;
+  for(let i=0;i<count;i++){
+    const t=Math.random()*Math.PI*2;
+    const x=16*Math.pow(Math.sin(t),3);
+    const y=-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t));
+    const randomScale=.82+Math.random()*.25;
+    particles.push(new Particle(
+      width/2+x*scale*randomScale,
+      height/2+y*scale*randomScale,
+      "#ff4d6d"
+    ));
+  }
+}
+
+function createILoveYou(){
+  particles=[];
+  const c=document.createElement("canvas"),ctx=c.getContext("2d");
+  c.width=width;c.height=height;
+  const fontSize=Math.min(width*.14,80);
+  ctx.fillStyle="white";ctx.font=`bold ${fontSize}px Arial`;
+  ctx.textAlign="center";ctx.textBaseline="middle";
+  ctx.fillText("I LOVE YOU",width/2,height/2);
+  createParticlesFromText(c,ctx,"#ff4d6d",5);
+}
+
+function createLoveLetter(){
+  particles=[];
+  const c=document.createElement("canvas"),ctx=c.getContext("2d");
+  c.width=width;c.height=height;
+  const fontSize=Math.max(16,Math.min(width/18,25));
+  ctx.fillStyle="white";ctx.font=`bold ${fontSize}px Arial`;
+  ctx.textAlign="left";ctx.textBaseline="top";
+
+  const words=loveLetter.trim().split(/\s+/);
+  const maxWidth=width-50,lineHeight=fontSize+13;
+  let lines=[],line="";
+
+  for(const word of words){
+    const testLine=line+word+" ";
+    if(ctx.measureText(testLine).width>maxWidth && line!==""){
+      lines.push(line.trim());line=word+" ";
+    }else line=testLine;
+  }
+  if(line.trim())lines.push(line.trim());
+
+  const totalHeight=lines.length*lineHeight;
+  let startY=Math.max(100,(height-totalHeight)/2);
+
+  lines.forEach((lineText,index)=>{
+    ctx.fillText(lineText,25,startY+index*lineHeight);
+  });
+
+  createParticlesFromText(c,ctx,"#00ffff",5);
+}
+
+function createParticlesFromText(tempCanvas,tempCtx,color,gap){
+  const imageData=tempCtx.getImageData(0,0,width,height),pixels=imageData.data;
+  for(let y=0;y<height;y+=gap){
+    for(let x=0;x<width;x+=gap){
+      const index=(y*width+x)*4;
+      if(pixels[index+3]>128) particles.push(new Particle(x,y,color));
+    }
+  }
+}
+
+function recognizeGesture(landmarks){
+  /*
+    Finger detection is based on the fingertip being above
+    its PIP joint. The thumb is intentionally ignored because
+    it behaves differently depending on hand orientation.
+  */
+  const indexUp=landmarks[8].y<landmarks[6].y;
+  const middleUp=landmarks[12].y<landmarks[10].y;
+  const ringUp=landmarks[16].y<landmarks[14].y;
+  const pinkyUp=landmarks[20].y<landmarks[18].y;
+
+  if(indexUp&&middleUp&&!ringUp&&!pinkyUp) return "PEACE";
+  if(indexUp&&middleUp&&ringUp&&pinkyUp) return "OPEN";
+  if(!indexUp&&!middleUp&&!ringUp&&!pinkyUp) return "FIST";
+  return "NONE";
+}
+
+function processGesture(gesture){
+  if(gesture==="NONE") return;
+
+  if(gesture!==candidateGesture){
+    candidateGesture=gesture;
+    candidateStartTime=performance.now();
+    return;
+  }
+
+  if(performance.now()-candidateStartTime>=GESTURE_HOLD_TIME &&
+     currentGesture!==candidateGesture){
+    currentGesture=candidateGesture;
+    triggerGesture(currentGesture);
+  }
+}
+
+function triggerGesture(gesture){
+  if(gesture==="PEACE"){
+    statusEl.innerText="❤️ Heart Formed!";
+    createHeartShape(500);
+  }else if(gesture==="FIST"){
+    statusEl.innerText="💖 I LOVE YOU";
+    createILoveYou();
+  }else if(gesture==="OPEN"){
+    statusEl.innerText="💌 A message for you...";
+    createLoveLetter();
+  }
+}
+
+function onResults(results){
+  canvasCtx.clearRect(0,0,width,height);
+
+  if(results.multiHandLandmarks&&results.multiHandLandmarks.length>0){
+    const landmarks=results.multiHandLandmarks[0];
+    processGesture(recognizeGesture(landmarks));
+  }else{
+    statusEl.innerText="I-angat ang kamay ✋";
+  }
+
+  particles.forEach(p=>{p.update();p.draw();});
+}
+
+const hands=new Hands({
+  locateFile:file=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+});
+
+hands.setOptions({
+  maxNumHands:1,
+  modelComplexity:1,
+  minDetectionConfidence:.65,
+  minTrackingConfidence:.65
+});
+
+hands.onResults(onResults);
+
+let camera=null,mediaStream=null;
+
+async function startCamera(){
+  errorEl.innerText="";
+  startButton.disabled=true;
+  startButton.innerText="Opening Camera...";
+
+  try{
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+      throw new Error("Camera API is not supported.");
+    }
+
+    mediaStream=await navigator.mediaDevices.getUserMedia({
+      video:{
+        facingMode:"user",
+        width:{ideal:640},
+        height:{ideal:480}
+      },
+      audio:false
+    });
+
+    videoElement.srcObject=mediaStream;
+    await videoElement.play();
+
+    camera=new Camera(videoElement,{
+      onFrame:async()=>{await hands.send({image:videoElement});},
+      width:640,
+      height:480
+    });
+
+    camera.start();
+    startScreen.style.display="none";
+    statusEl.innerText="I-angat ang kamay ✋";
+  }catch(error){
+    console.error("Camera Error:",error);
+    startButton.disabled=false;
+    startButton.innerText="Try Again 📷";
+
+    if(error.name==="NotAllowedError"){
+      errorEl.innerText="❌ Camera permission denied. Allow camera access sa browser settings.";
+    }else if(error.name==="NotFoundError"){
+      errorEl.innerText="❌ Walang camera na nakita.";
+    }else if(error.name==="NotReadableError"){
+      errorEl.innerText="❌ Ginagamit ng ibang app ang camera. Isara muna ang ibang camera app.";
+    }else if(error.name==="SecurityError"){
+      errorEl.innerText="❌ Browser security blocked the camera. Siguraduhing HTTPS ang GitHub Pages.";
+    }else{
+      errorEl.innerText="❌ Camera error: "+error.message;
+    }
+  }
+}
+
+startButton.addEventListener("click",startCamera);
+createHeartShape(250);
+</script>
+</body>
+</html>
